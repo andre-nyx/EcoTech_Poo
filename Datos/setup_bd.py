@@ -76,7 +76,7 @@ def inicializar_bd():
         conexion.commit()
         print("¡Éxito! Base de datos 'ecotech_db' y tablas creadas en MySQL.")
     except Error as e:
-        print(f"Error al crear la base de datos en MySQL: {e}")
+        raise ConnectionError("No fue posible inicializar la base de datos.") from None
     finally:
         if 'conexion' in locals() and conexion.is_connected():
             cursor.close()

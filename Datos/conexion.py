@@ -16,5 +16,5 @@ class ConexionBD:
             )
             return conexion
         except Error as e:
-            print(f"Error al conectar a MySQL: {e}")
+            print("No fue posible conectar con la base de datos.")
             return None

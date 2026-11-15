@@ -22,7 +22,7 @@ class UsuarioDAO:
         except IntegrityError as err:
             raise ValueError(f"El usuario '{usuario.username}' ya existe.") from err
         except Error as err:
-            raise ConnectionError(f"Error de base de datos al registrar el usuario: {err}") from err
+            raise ConnectionError("No fue posible registrar el usuario. Intente nuevamente.") from err
         finally:
             if cursor is not None:
                 cursor.close()
@@ -32,6 +32,11 @@ class UsuarioDAO:
     def autenticar(username: str, password: str) -> Usuario:
         if not username or not password:
             raise ValueError("Debe ingresar usuario y contraseña.")
+        
+        Usuario.validar_username(username)
+        if len(password) > 128:
+            raise PermissionError("Usuario o contraseña incorrectos.")
+        
         conexion = ConexionBD.obtener_conexion()
         if conexion is None:
             raise ConnectionError("No se pudo conectar con la base de datos.")
@@ -42,7 +47,7 @@ class UsuarioDAO:
             cursor.execute(sql, (username,))
             fila = cursor.fetchone()
         except Error as err:
-            raise ConnectionError(f"Error de base de datos al consultar el usuario: {err}") from err
+            raise ConnectionError("No fue posible validar las credenciales. Intente nuevamente.") from err
         finally:
             if cursor is not None:
                 cursor.close()
@@ -77,7 +82,7 @@ class UsuarioDAO:
 
             return True
         except Error as err:
-            raise ConnectionError(f"Error de base de datos al eliminar el usuario: {err}") from err
+            raise ConnectionError("No fue posible eliminar el usuario. Intente nuevamente.") from err
         finally:
             if cursor is not None:
                 cursor.close()
@@ -107,7 +112,7 @@ class UsuarioDAO:
 
             return True
         except Error as err:
-            raise ConnectionError(f"Error de base de datos al actualizar el rol: {err}") from err
+            raise ConnectionError("No fue posible actualizar el rol. Intente nuevamente.") from err
         finally:
             if cursor is not None:
                 cursor.close()
@@ -128,7 +133,25 @@ class UsuarioDAO:
             registros = cursor.fetchall()
             return registros
         except Error as err:
-            raise ConnectionError(f"Error de base de datos al listar usuarios: {err}") from err
+            raise ConnectionError("No fue posible obtener la lista de usuarios. Intente nuevamente.") from err
+        finally:
+            if cursor is not None:
+                cursor.close()
+            conexion.close()
+    
+    @staticmethod
+    def contar_usuarios() -> int:
+        """Cantidad de usuarios registrados (sirve para saber si es el primero)."""
+        conexion = ConexionBD.obtener_conexion()
+        if conexion is None:
+            raise ConnectionError("No se pudo conectar con la base de datos.")
+        cursor = None
+        try:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT COUNT(*) FROM Usuario")
+            return cursor.fetchone()[0]
+        except Error as err:
+            raise ConnectionError("No fue posible consultar los usuarios. Intente nuevamente.") from err
         finally:
             if cursor is not None:
                 cursor.close()

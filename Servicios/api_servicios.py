@@ -1,11 +1,17 @@
 import os
+import re
+from pathlib import Path
+
 import requests
+
+_PATRON_CIUDAD = re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .-]{2,60}(,\s?[A-Za-z]{2})?")
 
 
 def cargar_env():
     """Lee el archivo .env local si existe para cargar la API Key de forma segura."""
-    if os.path.exists(".env"):
-        with open(".env", "r", encoding="utf-8") as archivo:
+    ruta_env = Path(__file__).resolve().parent.parent / ".env"
+    if ruta_env.exists():
+        with open(ruta_env, "r", encoding="utf-8") as archivo:
             for linea in archivo:
                 linea = linea.strip()
                 if linea and not linea.startswith("#") and "=" in linea:
@@ -51,18 +57,24 @@ class APIservice:
             }
 
         except requests.exceptions.Timeout:
-            raise ConnectionError("Tiempo de espera agotado al conectar con la API de indicadores.")
+            # Cambio c)
+            raise ConnectionError("Tiempo de espera agotado al conectar con la API de indicadores.") from None
 
         except requests.exceptions.HTTPError as http_err:
-            codigo = http_err.response.status_code if http_err.response else "desconocido"
-            raise ConnectionError(f"Error en el servidor externo de indicadores (Código HTTP {codigo}).")
+            # Cambio d) parte 1
+            codigo = http_err.response.status_code if http_err.response is not None else "desconocido"
+            # Cambio c)
+            raise ConnectionError(f"Error en el servidor externo de indicadores (Código HTTP {codigo}).") from None
 
-        except (ValueError, KeyError):
-            raise ValueError("Los datos recibidos de la API económica no tienen el formato esperado.")
+        # Cambio d) parte 2
+        except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+            # Cambio c)
+            raise ValueError("Los datos recibidos de la API económica no tienen el formato esperado.") from None
 
         except requests.exceptions.RequestException:
             # Seguridad: No expone trazas ni detalles técnicos internos del sistema
-            raise ConnectionError("No hay conexión a internet o el servidor de indicadores no está disponible.")
+            # Cambio c)
+            raise ConnectionError("No hay conexión a internet o el servidor de indicadores no está disponible.") from None
 
     @staticmethod
     def obtener_clima(ciudad: str):
@@ -70,13 +82,14 @@ class APIservice:
         Consulta temperatura, humedad y estado del tiempo desde OpenWeatherMap.
         Valida la entrada del usuario y protege la API Key.
         """
-        # 1. Validación de entrada (Criterio 3.1.2)
-        if not ciudad or not isinstance(ciudad, str) or len(ciudad.strip()) < 2:
-            raise ValueError("Debe ingresar un nombre de ciudad válido (mínimo 2 caracteres).")
+        # 1. Validación de entrada (Criterio 3.1.2) - Cambio e)
+        if not isinstance(ciudad, str) or not _PATRON_CIUDAD.fullmatch(ciudad.strip()):
+            raise ValueError("Ingrese una ciudad válida (solo letras, espacios y guion; opcional ', CL').")
 
         # Seguridad (Criterio 3.1.2): Lee la clave desde el archivo .env o variable de entorno
         api_key = os.getenv("OPENWEATHER_API_KEY", "")
         if not api_key:
+            # OJO: Este raise NO está dentro de un except, así que NO lleva "from None"
             raise ConnectionError("Falta configurar la API Key de OpenWeatherMap en el archivo .env.")
 
         url = "https://api.openweathermap.org/data/2.5/weather"
@@ -101,43 +114,28 @@ class APIservice:
             }
 
         except requests.exceptions.Timeout:
-            raise ConnectionError("Tiempo de espera agotado al conectar con el servicio de clima.")
+            # Cambio c)
+            raise ConnectionError("Tiempo de espera agotado al conectar con el servicio de clima.") from None
 
         except requests.exceptions.HTTPError as http_err:
-            codigo = http_err.response.status_code if http_err.response else "desconocido"
+            # Cambio d) parte 1
+            codigo = http_err.response.status_code if http_err.response is not None else "desconocido"
             if codigo == 401:
-                raise ConnectionError("Error de autenticación con la API de clima (API Key inválida o aún en activación).")
+                # Cambio c)
+                raise ConnectionError("Error de autenticación con la API de clima (API Key inválida o aún en activación).") from None
             elif codigo == 404:
-                raise ValueError(f"No se encontró información climática para la ciudad '{ciudad}'.")
+                # Cambio c)
+                raise ValueError(f"No se encontró información climática para la ciudad '{ciudad}'.") from None
             else:
-                raise ConnectionError(f"Error en el servidor de clima (Código HTTP {codigo}).")
+                # Cambio c)
+                raise ConnectionError(f"Error en el servidor de clima (Código HTTP {codigo}).") from None
 
-        except (ValueError, KeyError):
-            raise ValueError("Error al procesar la respuesta del servicio de clima.")
+        # Cambio d) parte 2
+        except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+            # Cambio c)
+            raise ValueError("Error al procesar la respuesta del servicio de clima.") from None
 
         except requests.exceptions.RequestException:
             # Seguridad (Criterio 3.1.3): Evita imprimir la URL con la 'appid' (API Key) en caso de error de red
-            raise ConnectionError("No hay conexión a internet o el servidor de clima no está disponible.")
-
-
-# Bloque de prueba independiente
-if __name__ == "__main__":
-    print("=== 1. PROBANDO API DE INDICADORES ECONÓMICOS ===")
-    try:
-        indicadores = APIservice.obtener_indicadores()
-        print("Conexión exitosa:")
-        for clave, valor in indicadores.items():
-            print(f" - {clave.upper()}: {valor}")
-    except Exception as e:
-        print(f"Aviso controlado: {e}")
-
-    print("\n=== 2. PROBANDO API DE CLIMA ===")
-    try:
-        clima = APIservice.obtener_clima("Copiapo")
-        print("Conexión exitosa:")
-        print(f" - Ciudad: {clima['ciudad']}")
-        print(f" - Temperatura: {clima['temperatura']} °C")
-        print(f" - Humedad: {clima['humedad']}%")
-        print(f" - Estado: {clima['estado']}")
-    except Exception as e:
-        print(f"Aviso controlado: {e}")
+            # Cambio c)
+            raise ConnectionError("No hay conexión a internet o el servidor de clima no está disponible.") from None

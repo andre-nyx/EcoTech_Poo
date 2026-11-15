@@ -48,10 +48,14 @@ class Usuario:
 
     @username.setter
     def username(self, valor: str):
+        self.__username = self.validar_username(valor)
+
+    @staticmethod
+    def validar_username(valor: str) -> str:
         if not isinstance(valor, str) or not _PATRON_USERNAME.fullmatch(valor):
             raise ValueError("El usuario debe tener de 3 a 30 caracteres: "
                              "letras, números, punto, guion o guion bajo.")
-        self.__username = valor
+        return valor
 
     @property
     def rol(self) -> str:
@@ -88,6 +92,11 @@ class Usuario:
     def acceder_modulo(self) -> None:
         if not self.__sesion_activa:
             raise PermissionError("Debe iniciar sesión para acceder a este módulo.")
+
+    def exigir_rol(self, rol_requerido: str) -> None:
+        self.acceder_modulo()
+        if self.__rol != rol_requerido:
+            raise PermissionError("No tiene permisos para realizar esta acción.")
 
     def _validar_entradas(self) -> bool:  # Método protegido (-) del UML
         return bool(self.__username and self.__password_cifrada)
