@@ -57,23 +57,16 @@ class APIservice:
             }
 
         except requests.exceptions.Timeout:
-            # Cambio c)
             raise ConnectionError("Tiempo de espera agotado al conectar con la API de indicadores.") from None
 
         except requests.exceptions.HTTPError as http_err:
-            # Cambio d) parte 1
             codigo = http_err.response.status_code if http_err.response is not None else "desconocido"
-            # Cambio c)
             raise ConnectionError(f"Error en el servidor externo de indicadores (Código HTTP {codigo}).") from None
 
-        # Cambio d) parte 2
         except (ValueError, KeyError, IndexError, TypeError, AttributeError):
-            # Cambio c)
             raise ValueError("Los datos recibidos de la API económica no tienen el formato esperado.") from None
 
         except requests.exceptions.RequestException:
-            # Seguridad: No expone trazas ni detalles técnicos internos del sistema
-            # Cambio c)
             raise ConnectionError("No hay conexión a internet o el servidor de indicadores no está disponible.") from None
 
     @staticmethod
@@ -82,14 +75,13 @@ class APIservice:
         Consulta temperatura, humedad y estado del tiempo desde OpenWeatherMap.
         Valida la entrada del usuario y protege la API Key.
         """
-        # 1. Validación de entrada (Criterio 3.1.2) - Cambio e)
+        # 1. Validación de entrada 
         if not isinstance(ciudad, str) or not _PATRON_CIUDAD.fullmatch(ciudad.strip()):
             raise ValueError("Ingrese una ciudad válida (solo letras, espacios y guion; opcional ', CL').")
 
-        # Seguridad (Criterio 3.1.2): Lee la clave desde el archivo .env o variable de entorno
+        # Seguridad 
         api_key = os.getenv("OPENWEATHER_API_KEY", "")
         if not api_key:
-            # OJO: Este raise NO está dentro de un except, así que NO lleva "from None"
             raise ConnectionError("Falta configurar la API Key de OpenWeatherMap en el archivo .env.")
 
         url = "https://api.openweathermap.org/data/2.5/weather"
@@ -114,28 +106,20 @@ class APIservice:
             }
 
         except requests.exceptions.Timeout:
-            # Cambio c)
             raise ConnectionError("Tiempo de espera agotado al conectar con el servicio de clima.") from None
 
         except requests.exceptions.HTTPError as http_err:
-            # Cambio d) parte 1
             codigo = http_err.response.status_code if http_err.response is not None else "desconocido"
             if codigo == 401:
-                # Cambio c)
                 raise ConnectionError("Error de autenticación con la API de clima (API Key inválida o aún en activación).") from None
             elif codigo == 404:
-                # Cambio c)
                 raise ValueError(f"No se encontró información climática para la ciudad '{ciudad}'.") from None
             else:
-                # Cambio c)
+
                 raise ConnectionError(f"Error en el servidor de clima (Código HTTP {codigo}).") from None
 
-        # Cambio d) parte 2
         except (ValueError, KeyError, IndexError, TypeError, AttributeError):
-            # Cambio c)
             raise ValueError("Error al procesar la respuesta del servicio de clima.") from None
 
         except requests.exceptions.RequestException:
-            # Seguridad (Criterio 3.1.3): Evita imprimir la URL con la 'appid' (API Key) en caso de error de red
-            # Cambio c)
             raise ConnectionError("No hay conexión a internet o el servidor de clima no está disponible.") from None
