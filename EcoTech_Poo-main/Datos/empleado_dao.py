@@ -18,7 +18,6 @@ class EmpleadoDAO:
             return
         try:
             cursor = conexion.cursor()
-            # En MySQL se usa (%s) en lugar de (?) para consultas seguras parametrizadas
             sql = "INSERT INTO Departamento (nombre) VALUES (%s)"
             cursor.execute(sql, (nombre,))
             conexion.commit()
@@ -109,9 +108,8 @@ class EmpleadoDAO:
             conexion.close()
 
 
-# ==========================================
 # --- BLOQUE DE PRUEBA EN MYSQL ---
-# ==========================================
+
 if __name__ == "__main__":
     # 1. Registrar un departamento de prueba
     EmpleadoDAO.registrar_departamento("Desarrollo de Software")
